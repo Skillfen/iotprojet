@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 
+from .alerting import AlertNotifier
 from .anomaly import AnomalyDetector
 from .config import settings
 from .es_repository import ElasticsearchRepository
@@ -33,6 +34,8 @@ def run() -> None:
         settings.elasticsearch_host, settings.elasticsearch_index, _resolve_mapping_path()
     )
     detector = AnomalyDetector(settings)
+    notifier = AlertNotifier(settings.alert_webhook_url, settings.alert_cooldown_seconds)
+    logger.info("Alert webhook %s", "enabled" if notifier.enabled else "disabled (set ALERT_WEBHOOK_URL to enable)")
 
     try:
         repository.wait_until_ready()
@@ -84,6 +87,7 @@ def run() -> None:
                 reading.device, reading.temperature, reading.humidity,
                 reading.gas_ppm, reading.gas_alert,
             )
+            notifier.notify(reading.to_document())
 
     subscriber = MQTTSubscriber(
         broker=settings.mqtt_broker,

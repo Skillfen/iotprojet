@@ -49,6 +49,9 @@ services:
       - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-iot-data}
       - TEMPERATURE_THRESHOLD=${TEMPERATURE_THRESHOLD:-35.0}
       - HUMIDITY_THRESHOLD=${HUMIDITY_THRESHOLD:-80.0}
+      - GAS_PPM_THRESHOLD=${GAS_PPM_THRESHOLD:-1000.0}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - ALERT_COOLDOWN_SECONDS=${ALERT_COOLDOWN_SECONDS:-60}
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -64,6 +67,7 @@ services:
     environment:
       - ELASTICSEARCH_HOST=http://elasticsearch:9200
       - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-iot-data}
+      - STALE_AFTER_SECONDS=${STALE_AFTER_SECONDS:-60}
     ports:
       - "8000:8000"
     depends_on:

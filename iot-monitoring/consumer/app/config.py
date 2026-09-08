@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     humidity_threshold: float = 80.0
     gas_ppm_threshold: float = 1000.0
 
+    # ---- Alerting (optional outbound webhook, e.g. Slack/Discord/Teams) ----
+    alert_webhook_url: Optional[str] = None
+    alert_cooldown_seconds: int = 60
+
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

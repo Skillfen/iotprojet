@@ -10,10 +10,12 @@ This project simulates an environmental monitoring station. A virtual ESP32 boar
 
 ```mermaid
 flowchart TD
-    A[ESP32 + DHT22<br/>Wokwi Simulator] -- MQTT publish<br/>topic: iot/sensors --> B[broker.hivemq.com<br/>MQTT Broker :1883]
-    B -- MQTT subscribe --> C[Python MQTT Consumer<br/>mqtt_consumer.py]
+    A[ESP32 + DHT22/PIR/MQ2/LDR<br/>Wokwi Simulator] -- MQTT publish<br/>topic: iot/sensors --> B[broker.hivemq.com<br/>MQTT Broker :1883]
+    B -- MQTT subscribe --> C[Python MQTT Consumer<br/>consumer/app]
     C -- index document --> D[(Elasticsearch<br/>index: iot-data)]
+    C -- anomaly? --> F[Alert Webhook<br/>Slack/Discord/Teams]
     D -- query --> E[Kibana Dashboard<br/>:5601]
+    D -- query --> G[FastAPI Query API<br/>:8000]
 ```
 
 | Layer | Technology |
@@ -21,7 +23,8 @@ flowchart TD
 | Sensor node | ESP32 DevKit V1 + DHT22, PIR, MQ2 gas sensor, LDR (Wokwi simulation) |
 | Local actuators | LED + buzzer (threshold alerts on the board itself) |
 | Messaging | MQTT over `broker.hivemq.com:1883` |
-| Consumer | Python 3, `paho-mqtt`, `elasticsearch` client |
+| Consumer | Python 3, `paho-mqtt`, `elasticsearch` client, outbound alert webhook |
+| Query API | FastAPI (`api/`), read-only REST endpoints over Elasticsearch |
 | Storage | Elasticsearch 8.x |
 | Visualization | Kibana 8.x |
 | Orchestration | Docker Compose |
@@ -40,8 +43,24 @@ iot-monitoring/
 │
 ├── consumer/
 │   ├── mqtt_consumer.py
-│   ├── config.py
-│   └── requirements.txt
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app/
+│   │   ├── config.py
+│   │   ├── models.py
+│   │   ├── mqtt_client.py
+│   │   ├── anomaly.py
+│   │   ├── alerting.py
+│   │   ├── es_repository.py
+│   │   └── main.py
+│   └── tests/
+│
+├── api/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       ├── config.py
+│       └── main.py
 │
 ├── elasticsearch/
 │   └── init_index.json
@@ -158,6 +177,30 @@ Count anomalies:
 ```bash
 curl -X GET "http://localhost:9200/iot-data/_count?pretty" -H "Content-Type: application/json" -d "{\"query\": {\"term\": {\"anomaly\": true}}}"
 ```
+
+## 8.1 Query API & Advanced Monitoring/Alerting
+
+The FastAPI service (`api/`, started automatically by `docker compose up -d`, or run locally with `uvicorn app.main:app --reload` from `api/`) exposes:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | API + Elasticsearch connectivity check |
+| `GET /readings/latest?device=&limit=` | Most recent readings, optionally filtered by device |
+| `GET /devices` | Distinct device IDs seen so far |
+| `GET /stats/anomalies` | Total anomaly count |
+| `GET /alerts/recent?limit=` | Most recent anomalous readings (alert feed) |
+| `GET /stats/summary` | Per-device monitoring summary: last reading, anomaly count, and `stale` flag (no data received for more than `STALE_AFTER_SECONDS`, default 60s) |
+
+Interactive docs are available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+**Outbound alerting**: the consumer (`consumer/app/alerting.py`) can push a notification to a Slack/Discord/Microsoft Teams incoming webhook whenever a reading is flagged as an anomaly (temperature/humidity/gas over threshold, or PIR/MQ2 alert). Configure it via environment variables (e.g. in a `.env` file at the repo root, read by `docker-compose.yml`):
+
+```bash
+ALERT_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+ALERT_COOLDOWN_SECONDS=60   # minimum delay between two alerts for the same device
+```
+
+Alerting is disabled by default (no spam without a webhook configured) and is throttled per device to avoid flooding the channel.
 
 ## 9. Kibana Configuration
 
