@@ -1,0 +1,11 @@
+# Arduino libraries required to compile sketch.ino
+# Install via Arduino IDE Library Manager (Sketch > Include Library > Manage Libraries)
+# These are also pre-included automatically by the Wokwi simulator.
+
+PubSubClient by Nick O'Leary        # MQTT client
+DHT sensor library by Adafruit      # DHT22 sensor driver
+Adafruit Unified Sensor by Adafruit # Dependency of DHT sensor library
+ArduinoJson by Benoit Blanchon      # JSON payload serialization
+
+# The PIR motion sensor, MQ2 gas sensor and LDR are read with the built-in
+# digitalRead()/analogRead() functions, so no extra library is required for them.

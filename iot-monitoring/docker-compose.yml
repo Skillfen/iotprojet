@@ -1,0 +1,82 @@
+version: "3.8"
+
+# IoT Monitoring Platform - full stack: Elasticsearch, Kibana, MQTT consumer and query API
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: iot-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - iot-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: iot-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iot-network
+
+  consumer:
+    build:
+      context: .
+      dockerfile: consumer/Dockerfile
+    container_name: iot-consumer
+    environment:
+      - MQTT_BROKER=${MQTT_BROKER:-broker.hivemq.com}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_TOPIC=${MQTT_TOPIC:-iot/sensors}
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-iot-data}
+      - TEMPERATURE_THRESHOLD=${TEMPERATURE_THRESHOLD:-35.0}
+      - HUMIDITY_THRESHOLD=${HUMIDITY_THRESHOLD:-80.0}
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iot-network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: iot-api
+    environment:
+      - ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=${ELASTICSEARCH_INDEX:-iot-data}
+    ports:
+      - "8000:8000"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iot-network
+    restart: unless-stopped
+
+networks:
+  iot-network:
+    driver: bridge
+
+volumes:
+  es_data:
+    driver: local

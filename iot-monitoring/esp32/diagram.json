@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "author": "IoT Monitoring Project",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-v1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht22",
+      "top": -76.8,
+      "left": 148.2,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pir-motion-sensor",
+      "id": "pir1",
+      "top": 20,
+      "left": 280,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-gas-sensor",
+      "id": "gas1",
+      "top": 120,
+      "left": 280,
+      "attrs": { "ppm": "400" }
+    },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": 220,
+      "left": 280,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 20,
+      "left": -220,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": 20,
+      "left": -280,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer1",
+      "top": 140,
+      "left": -280,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "esp32:D4", "dht22:SDA", "green", [] ],
+    [ "dht22:VCC", "esp32:3V3", "red", [] ],
+    [ "dht22:GND", "esp32:GND.1", "black", [] ],
+
+    [ "esp32:D13", "pir1:OUT", "green", [] ],
+    [ "pir1:VCC", "esp32:3V3", "red", [] ],
+    [ "pir1:GND", "esp32:GND.1", "black", [] ],
+
+    [ "esp32:D34", "gas1:AOUT", "green", [] ],
+    [ "esp32:D27", "gas1:DOUT", "yellow", [] ],
+    [ "gas1:VCC", "esp32:3V3", "red", [] ],
+    [ "gas1:GND", "esp32:GND.2", "black", [] ],
+
+    [ "esp32:D35", "ldr1:AO", "green", [] ],
+    [ "ldr1:VCC", "esp32:3V3", "red", [] ],
+    [ "ldr1:GND", "esp32:GND.2", "black", [] ],
+
+    [ "esp32:D25", "r1:1", "green", [] ],
+    [ "r1:2", "led1:A", "green", [] ],
+    [ "led1:C", "esp32:GND.1", "black", [] ],
+
+    [ "esp32:D26", "buzzer1:1", "green", [] ],
+    [ "buzzer1:2", "esp32:GND.2", "black", [] ]
+  ],
+  "dependencies": {}
+}
